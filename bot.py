@@ -361,13 +361,11 @@ def analyze_coin(coin, closes, volumes, ohlc):
     bullish_count = sum(1 for v in scores.values() if v > 10)
     bearish_count = sum(1 for v in scores.values() if v < -10)
 
-    # === SİNYAL KARARI ===
-    if total_score > 25 and bullish_count >= 3:
+    # === SİNYAL KARARI (her zaman LONG veya SHORT) ===
+    if total_score >= 0:
         signal = "LONG"
-    elif total_score < -25 and bearish_count >= 3:
-        signal = "SHORT"
     else:
-        signal = "HOLD"
+        signal = "SHORT"
 
     # === GÜVEN SEVİYESİ ===
     abs_score = abs(total_score)
@@ -382,21 +380,21 @@ def analyze_coin(coin, closes, volumes, ohlc):
 
     # === HEDEF FİYAT ===
     target = None
-    if signal == "LONG" and resistances:
-        targets_above = [r for r in resistances if r > price]
+    if signal == "LONG":
+        targets_above = [r for r in resistances if r > price] if resistances else []
         if targets_above:
             target = min(targets_above)
         elif bb_upper:
             target = bb_upper
-    elif signal == "SHORT" and supports:
-        targets_below = [s for s in supports if s < price]
+    else:  # SHORT
+        targets_below = [s for s in supports if s < price] if supports else []
         if targets_below:
             target = max(targets_below)
         elif bb_lower:
             target = bb_lower
 
     # Hedef yoksa Bollinger band kullan
-    if target is None and signal != "HOLD":
+    if target is None:
         if signal == "LONG" and bb_upper:
             target = bb_upper
         elif signal == "SHORT" and bb_lower:
@@ -460,7 +458,7 @@ def build_report(coins_analysis):
     lines.append("")
     lines.append("━━━━━ TOP 10 HACİM ━━━━━")
 
-    longs, shorts, holds = [], [], []
+    longs, shorts = [], []
 
     for item in coins_analysis:
         coin = item["coin"]
@@ -472,24 +470,21 @@ def build_report(coins_analysis):
         if signal == "LONG":
             emoji = "🟢"
             longs.append(coin["base"])
-        elif signal == "SHORT":
+        else:
             emoji = "🔴"
             shorts.append(coin["base"])
-        else:
-            emoji = "⚪"
-            holds.append(coin["base"])
 
         lines.append("")
         lines.append(f"{emoji} <b>{symbol_display}</b> | <b>{signal}</b>")
         lines.append(f"💰 Fiyat: {fmt_price(coin['price'])} ({coin['change_24h']:+.1f}%)")
 
-        if a["target"] and signal != "HOLD":
+        if a["target"]:
             lines.append(f"🎯 Hedef: {fmt_price(a['target'])}")
 
         lines.append(f"📊 Skor: {score:+.0f} ({a['confidence']})")
 
         macd_dir = "Pozitif" if a["macd_hist"] > 0 else "Negatif"
-        trend_icon = "📈" if signal == "LONG" else ("📉" if signal == "SHORT" else "📊")
+        trend_icon = "📈" if signal == "LONG" else "📉"
         lines.append(f"{trend_icon} RSI: {a['rsi']} | MACD: {macd_dir}")
         lines.append(f"💡 {a['reason']}")
 
@@ -500,8 +495,6 @@ def build_report(coins_analysis):
         lines.append(f"🟢 LONG: {', '.join(longs)}")
     if shorts:
         lines.append(f"🔴 SHORT: {', '.join(shorts)}")
-    if holds:
-        lines.append(f"⚪ HOLD: {', '.join(holds)}")
 
     lines.append("")
     lines.append("⚠️ <i>Bu rapor bilgi amaçlıdır, yatırım tavsiyesi değildir.</i>")
