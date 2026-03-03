@@ -517,7 +517,7 @@ def main():
     results = []
     for coin in coins:
         print(f"  📊 {coin['base']}/USDT analiz ediliyor...")
-        closes, volumes, ohlc = get_klines(coin["symbol"], "1h", 100)
+        closes, volumes, ohlc = get_klines(coin["symbol"], "1h", 200)
         if len(closes) < 30:
             print(f"  ⚠️ {coin['base']}: Yetersiz veri ({len(closes)} mum)")
             continue
